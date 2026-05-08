@@ -350,6 +350,54 @@ export function createTasksTower(deps) {
           5000,
         );
 
+        // 打印完整数据结构用于调试
+        // addLog({
+        //   time: new Date().toLocaleTimeString(),
+        //   message: `${token.name} 怪异塔信息：${JSON.stringify(evotowerinfo1)}`,
+        //   type: "info",
+        // });
+
+        // 检查是否需要领取通关奖励（如果 towerId 是 10 的倍数，说明刚通关 10 层）
+        const initialTowerId = evotowerinfo1?.evoTower?.towerId || 0;
+        if (initialTowerId > 0 && initialTowerId % 10 === 0) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 检测到 towerId=${initialTowerId}，需要先领取第${initialTowerId / 10}章通关奖励`,
+            type: "info",
+          });
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_claimreward",
+              {},
+              5000,
+            );
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 成功领取第${initialTowerId / 10}章通关奖励！`,
+              type: "success",
+            });
+            // 领取奖励后重新获取信息
+            const evotowerinfoRefresh = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_getinfo",
+              {},
+              5000,
+            );
+            // addLog({
+            //   time: new Date().toLocaleTimeString(),
+            //   message: `${token.name} 领取奖励后怪异塔信息：${JSON.stringify(evotowerinfoRefresh)}`,
+            //   type: "info",
+            // });
+          } catch (err) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 领取奖励失败：${err.message}`,
+              type: "warning",
+            });
+          }
+        }
+
         let currentEnergy = evotowerinfo1?.evoTower?.energy;
 
         addLog({
@@ -364,13 +412,20 @@ export function createTasksTower(deps) {
 
         while (currentEnergy > 0 && count < MAX_CLIMB && !shouldStop.value) {
           try {
-            await tokenStore.sendMessageWithPromise(
+            // 准备战斗
+            const readyResult = await tokenStore.sendMessageWithPromise(
               tokenId,
               "evotower_readyfight",
               {},
               5000,
             );
+            // addLog({
+            //   time: new Date().toLocaleTimeString(),
+            //   message: `${token.name} evotower_readyfight 结果：${JSON.stringify(readyResult)}`,
+            //   type: "info",
+            // });
 
+            // 执行战斗
             const fightResult = await tokenStore.sendMessageWithPromise(
               tokenId,
               "evotower_fight",
