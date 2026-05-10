@@ -594,6 +594,13 @@
               <n-space>
                 <n-button
                   size="small"
+                  @click="batchLegacyBeginHangup"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  开始探索
+                </n-button>
+                <n-button
+                  size="small"
                   @click="batchLegacyClaim"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -5756,7 +5763,7 @@ const {
 } = tasksStore;
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
-const { batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
+const { batchLegacyBeginHangup, batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
 
 const startBatch = async () => {
   if (selectedTokens.value.length === 0) return;
