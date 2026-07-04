@@ -583,6 +583,20 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="legion_storebuyRedFragment"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买红将碎片
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="legion_storebuyWhiteJade"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买白玉
+                </n-button>
+                <n-button
+                  size="small"
                   @click="legionStoreBuySkinCoins"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -5758,6 +5772,8 @@ const tasksStore = createTasksStore(createTaskDeps());
 const {
   legion_storebuygoods,
   legionStoreBuySkinCoins,
+  legion_storebuyRedFragment,
+  legion_storebuyWhiteJade,
   store_purchase,
   collection_claimfreereward,
 } = tasksStore;
