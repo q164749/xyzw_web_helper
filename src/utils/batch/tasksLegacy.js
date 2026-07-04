@@ -55,6 +55,19 @@ export function createTasksLegacy(deps) {
         });
         await ensureConnection(tokenId);
 
+        // 先调用 legacy_getinfo 进入功法主页，重置赛季状态
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 进入功法主页 ===`,
+          type: "info",
+        });
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legacy_getinfo",
+          {},
+          5000,
+        );
+
         const beginHangupResp = await tokenStore.sendMessageWithPromise(
           tokenId,
           "legacy_beginhangup",
@@ -70,9 +83,13 @@ export function createTasksLegacy(deps) {
       } catch (error) {
         console.error(error);
         tokenStatus.value[tokenId] = "failed";
+        let errorMsg = error.message || "未知错误";
+        if (errorMsg.includes("12400160") || errorMsg.includes("200160")) {
+          errorMsg = "新赛季已开启，请重新进入本功能";
+        }
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 开始探索失败：${error.message || "未知错误"}`,
+          message: `=== ${token.name} 开始探索失败：${errorMsg}`,
           type: "error",
         });
       } finally {
