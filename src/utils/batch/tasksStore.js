@@ -1,6 +1,7 @@
 /**
  * 商店类任务
- * 包含: legion_storebuygoods, legionStoreBuySkinCoins, store_purchase, collection_claimfreereward
+ * 包含: legion_storebuygoods, legionStoreBuySkinCoins, store_purchase, collection_claimfreereward, 
+ *       legion_storebuyRedFragment, legion_storebuyWhiteJade
  */
 
 /**
@@ -391,10 +392,208 @@ export function createTasksStore(deps) {
     shouldStop.value = false;
   };
 
+  /**
+   * 一键购买红将碎片
+   */
+  const legion_storebuyRedFragment = async () => {
+    if (selectedTokens.value.length === 0) return;
+
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+
+      tokenStatus.value[tokenId] = "running";
+
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始购买红将碎片: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 发送购买红将碎片请求...`,
+          type: "info",
+        });
+        const result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_storebuygoods",
+          { id: 7 },   // 红将碎片的商品ID为7
+          5000,
+        );
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+
+        if (result.error) {
+          if (result.error.includes("俱乐部商品购买数量超出上限")) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 本周已购买过红将碎片，跳过`,
+              type: "info",
+            });
+          } else if (result.error.includes("物品不存在")) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 盐锭不足或未加入军团，购买失败`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 购买失败: ${result.error}`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+          }
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 购买成功，获得红将碎片`,
+            type: "success",
+          });
+          tokenStatus.value[tokenId] = "completed";
+        }
+      } catch (error) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 购买过程出错: ${error.message}`,
+          type: "error",
+        });
+        tokenStatus.value[tokenId] = "failed";
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    currentRunningTokenId.value = null;
+    isRunning.value = false;
+    shouldStop.value = false;
+  };
+  /**
+   * 一键购买白玉
+   */
+  const legion_storebuyWhiteJade = async () => {
+    if (selectedTokens.value.length === 0) return;
+
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+
+      tokenStatus.value[tokenId] = "running";
+
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始购买白玉: ${token.name} ===`,
+          type: "info",
+        });
+
+        await ensureConnection(tokenId);
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 发送购买白玉请求...`,
+          type: "info",
+        });
+        const result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_storebuygoods",
+          { id: 8 },   // 白玉的商品ID为8
+          5000,
+        );
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+
+        if (result.error) {
+          if (result.error.includes("俱乐部商品购买数量超出上限")) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 本周已购买过白玉，跳过`,
+              type: "info",
+            });
+          } else if (result.error.includes("物品不存在")) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 盐锭不足或未加入军团，购买失败`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 购买失败: ${result.error}`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+          }
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 购买成功，获得白玉`,
+            type: "success",
+          });
+          tokenStatus.value[tokenId] = "completed";
+        }
+      } catch (error) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 购买过程出错: ${error.message}`,
+          type: "error",
+        });
+        tokenStatus.value[tokenId] = "failed";
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    currentRunningTokenId.value = null;
+    isRunning.value = false;
+    shouldStop.value = false;
+  };
+
+  // 返回所有任务函数（包括新增的 legion_storebuyWhiteJade）
   return {
     legion_storebuygoods,
     legionStoreBuySkinCoins,
     store_purchase,
     collection_claimfreereward,
+    legion_storebuyRedFragment,
+    legion_storebuyWhiteJade,
   };
 }
