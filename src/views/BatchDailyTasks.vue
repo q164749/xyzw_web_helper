@@ -614,6 +614,20 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="legion_storebuyRedFragment"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买红将碎片
+                </n-button>
+                <n-button
+                  size="small"
+                  @click="legion_storebuyWhiteJade"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  一键购买白玉
+                </n-button>
+                <n-button
+                  size="small"
                   @click="legionStoreBuySkinCoins"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -623,6 +637,13 @@
             </n-tab-pane>
             <n-tab-pane name="legacy" tab="功法">
               <n-space>
+                <n-button
+                  size="small"
+                  @click="batchLegacyBeginHangup"
+                  :disabled="isRunning || selectedTokens.length === 0"
+                >
+                  开始探索
+                </n-button>
                 <n-button
                   size="small"
                   @click="batchLegacyClaim"
@@ -5787,12 +5808,14 @@ const tasksStore = createTasksStore(createTaskDeps());
 const {
   legion_storebuygoods,
   legionStoreBuySkinCoins,
+  legion_storebuyRedFragment,
+  legion_storebuyWhiteJade,
   store_purchase,
   collection_claimfreereward,
 } = tasksStore;
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
-const { batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
+const { batchLegacyBeginHangup, batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
 
 const tasksFootball = createTasksFootball(createTaskDeps());
 const { batchFootballBet } = tasksFootball;

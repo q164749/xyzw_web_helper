@@ -346,6 +346,7 @@ export function registerDefaultCommands(reg) {
     // 功法
     .register("legacy_getinfo")
     .register("legacy_claimhangup")
+    .register("legacy_beginhangup")
     // 功法残卷赠送
     .register("legacy_gift_getlist")
     .register("legacy_gift_send", { recipientId: 0, itemId: 0, quantity: 0 })

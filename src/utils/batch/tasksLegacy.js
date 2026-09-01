@@ -31,6 +31,86 @@ export function createTasksLegacy(deps) {
   } = deps;
 
   /**
+   * 批量开始探索
+   */
+  const batchLegacyBeginHangup = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    const taskPromises = selectedTokens.value.map(async (tokenId) => {
+      if (shouldStop.value) return;
+      tokenStatus.value[tokenId] = "running";
+
+      const token = tokens.value.find((t) => t.id === tokenId);
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始探索：${token.name} ===`,
+          type: "info",
+        });
+        await ensureConnection(tokenId);
+
+        // 先调用 legacy_getinfo 进入功法主页，重置赛季状态
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 进入功法主页 ===`,
+          type: "info",
+        });
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legacy_getinfo",
+          {},
+          5000,
+        );
+
+        const beginHangupResp = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legacy_beginhangup",
+          {},
+          5000,
+        );
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 开始探索成功${beginHangupResp.message || ""}`,
+          type: "success",
+        });
+        tokenStatus.value[tokenId] = "completed";
+      } catch (error) {
+        console.error(error);
+        tokenStatus.value[tokenId] = "failed";
+        let errorMsg = error.message || "未知错误";
+        if (errorMsg.includes("12400160") || errorMsg.includes("200160")) {
+          errorMsg = "新赛季已开启，请重新进入本功能";
+        }
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 开始探索失败：${errorMsg}`,
+          type: "error",
+        });
+      } finally {
+        tokenStore.closeWebSocketConnection(tokenId);
+        releaseConnectionSlot();
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 连接已关闭 (队列：${connectionQueue.active}/${batchSettings.maxActive})`,
+          type: "info",
+        });
+      }
+    });
+
+    await Promise.all(taskPromises);
+
+    isRunning.value = false;
+    currentRunningTokenId.value = null;
+    message.success("批量开始探索结束");
+  };
+
+  /**
    * 批量领取功法残卷
    */
   const batchLegacyClaim = async () => {
@@ -341,6 +421,7 @@ export function createTasksLegacy(deps) {
   };
 
   return {
+    batchLegacyBeginHangup,
     batchLegacyClaim,
     batchLegacyGiftSendEnhanced,
   };
