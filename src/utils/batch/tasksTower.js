@@ -425,6 +425,54 @@ export function createTasksTower(deps) {
           5000,
         );
 
+        // 打印完整数据结构用于调试
+        // addLog({
+        //   time: new Date().toLocaleTimeString(),
+        //   message: `${token.name} 怪异塔信息：${JSON.stringify(evotowerinfo1)}`,
+        //   type: "info",
+        // });
+
+        // 检查是否需要领取通关奖励（如果 towerId 是 10 的倍数，说明刚通关 10 层）
+        const initialTowerId = evotowerinfo1?.evoTower?.towerId || 0;
+        if (initialTowerId > 0 && initialTowerId % 10 === 0) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 检测到 towerId=${initialTowerId}，需要先领取第${initialTowerId / 10}章通关奖励`,
+            type: "info",
+          });
+          try {
+            await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_claimreward",
+              {},
+              5000,
+            );
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 成功领取第${initialTowerId / 10}章通关奖励！`,
+              type: "success",
+            });
+            // 领取奖励后重新获取信息
+            const evotowerinfoRefresh = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "evotower_getinfo",
+              {},
+              5000,
+            );
+            // addLog({
+            //   time: new Date().toLocaleTimeString(),
+            //   message: `${token.name} 领取奖励后怪异塔信息：${JSON.stringify(evotowerinfoRefresh)}`,
+            //   type: "info",
+            // });
+          } catch (err) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 领取奖励失败：${err.message}`,
+              type: "warning",
+            });
+          }
+        }
+
         let currentEnergy = evotowerinfo1?.evoTower?.energy;
 
         addLog({
@@ -460,12 +508,18 @@ export function createTasksTower(deps) {
 
         while (currentEnergy > 0 && count < MAX_CLIMB && !shouldStop.value) {
           try {
-            await tokenStore.sendMessageWithPromise(
+            // 准备战斗
+            const readyResult = await tokenStore.sendMessageWithPromise(
               tokenId,
               "evotower_readyfight",
               {},
               5000,
             );
+            // addLog({
+            //   time: new Date().toLocaleTimeString(),
+            //   message: `${token.name} evotower_readyfight 结果：${JSON.stringify(readyResult)}`,
+            //   type: "info",
+            // });
 
             await tokenStore.sendMessageWithPromise(
               tokenId,
@@ -717,7 +771,7 @@ export function createTasksTower(deps) {
     message.success("批量领取怪异塔免费道具结束");
   };
 
-  /**
+/**
    * 换皮闯关
    */
   const skinChallenge = async () => {
@@ -729,6 +783,41 @@ export function createTasksTower(deps) {
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
     });
+
+    // 生成活动ID：根据当前日期，找到最近的周五（包含今天），格式 YYMMDD1
+    const getActId = () => {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 5=周五, 6=周六
+      
+      // 计算到最近周五的天数差
+      let daysToFriday;
+      if (currentDay === 5) {
+        // 今天是周五
+        daysToFriday = 0;
+      } else if (currentDay === 6) {
+        // 周六，往前推1天到周五
+        daysToFriday = -1;
+      } else if (currentDay === 0) {
+        // 周日，往前推2天到周五
+        daysToFriday = -2;
+      } else {
+        // 周一到周四，往前推 (currentDay + 2) 天到上周五
+        // 周一: -3, 周二: -4, 周三: -5, 周四: -6
+        daysToFriday = -(currentDay + 2);
+      }
+      
+      // 计算周五的日期
+      const friday = new Date(now);
+      friday.setDate(now.getDate() + daysToFriday);
+      
+      const year = String(friday.getFullYear()).slice(2);
+      const month = String(friday.getMonth() + 1).padStart(2, '0');
+      const day = String(friday.getDate()).padStart(2, '0');
+      
+      return parseInt(`${year}${month}${day}1`);
+    };
+
+    const actIdParam = getActId();
 
     const taskPromises = selectedTokens.value.map(async (tokenId) => {
       if (shouldStop.value) return;
@@ -746,6 +835,12 @@ export function createTasksTower(deps) {
         await ensureConnection(tokenId);
 
         // 获取活动信息
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 请求活动信息, actId: ${actIdParam}`,
+          type: "info",
+        });
+
         let res = await tokenStore.sendMessageWithPromise(
           tokenId,
           "towers_getinfo",
@@ -1006,6 +1101,13 @@ export function createTasksTower(deps) {
         addLog({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 换皮闯关失败: ${errorMessage}`,
+          type: "error",
+        });
+        
+        // 打印错误堆栈
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 错误堆栈: ${error.stack}`,
           type: "error",
         });
       } finally {
