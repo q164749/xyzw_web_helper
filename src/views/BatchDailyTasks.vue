@@ -6206,6 +6206,7 @@ const {
   legion_storebuyRedFragment,
   legion_storebuyWhiteJade,
   store_purchase,
+  store_syncpurchaseconfig,
   collection_claimfreereward,
 } = tasksStore;
 
